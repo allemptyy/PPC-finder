@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>가까운 지점 찾기</title>
+<title>PPC 찾기 - 가까운 지점 찾기</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -17,39 +17,40 @@
     --bronze: #92400E; --bronze-light: #FEF3C7;
     --radius: 10px; --radius-lg: 16px;
   }
-  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 16px 80px; }
-  header { max-width: 720px; margin: 0 auto 32px; }
-  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
-  header p { font-size: 14px; color: var(--text-muted); }
-  .main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
-  .card-title { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
-  .branch-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .branch-row { display: grid; grid-template-columns: 1fr 2fr auto auto; gap: 8px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; transition: border-color 0.15s; }
-  .branch-row:hover { border-color: #C0BCB2; }
-  .branch-row input { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; width: 100%; }
-  .branch-row input:focus { border-color: var(--accent); }
-  .branch-row input::placeholder { color: var(--text-muted); }
-  .toggle-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px solid; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
-  .toggle-btn.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
-  .toggle-btn.off { background: var(--surface2); border-color: var(--border); color: var(--text-muted); }
-  .del-btn { background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: 17px; line-height: 1; padding: 2px 4px; border-radius: 6px; transition: all 0.15s; }
-  .del-btn:hover { background: var(--danger-light); color: var(--danger); }
-  .add-btn { width: 100%; background: transparent; border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 10px; font-family: inherit; font-size: 13px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
-  .add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* 탭 네비게이션 */
+  .tab-nav { max-width: 760px; margin: 0 auto; padding: 24px 16px 0; display: flex; gap: 4px; }
+  .tab-btn { padding: 10px 24px; border: 1px solid var(--border); border-bottom: none; border-radius: 10px 10px 0 0; background: var(--surface2); font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: var(--surface); color: var(--text); font-weight: 700; border-color: var(--border); position: relative; }
+  .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--surface); }
+
+  .tab-content { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
+  .tab-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg); padding: 24px; }
+  .tab-panel.active { display: block; }
+
+  /* 검색 탭 */
+  header { margin-bottom: 20px; }
+  header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  header p { font-size: 13px; color: var(--text-muted); }
   .search-wrap { display: flex; gap: 10px; align-items: stretch; }
-  .search-wrap input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-family: inherit; font-size: 15px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .search-wrap input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-family: inherit; font-size: 15px; color: var(--text); outline: none; }
   .search-wrap input:focus { border-color: var(--accent); background: var(--surface); }
   .search-wrap input::placeholder { color: var(--text-muted); }
-  .search-btn { background: var(--accent); border: none; border-radius: var(--radius); padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .search-btn { background: var(--accent); border: none; border-radius: var(--radius); padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; white-space: nowrap; }
   .search-btn:hover { background: var(--accent-text); }
   .search-btn:disabled { background: #999; cursor: wait; }
-  .search-btn:active { transform: scale(0.98); }
   .status-msg { margin-top: 12px; font-size: 13px; color: var(--text-muted); }
   .status-msg.err { color: var(--danger); }
-  .save-notice { font-size: 12px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+  .sdk-status { font-size: 12px; color: var(--text-muted); text-align: center; padding: 6px; margin-top: 6px; }
+  .sdk-status.ready { color: var(--accent); }
+
+  .stat-bar { display: flex; gap: 16px; margin-bottom: 16px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius); font-size: 13px; color: var(--text-muted); }
+  .stat-bar strong { color: var(--text); }
+
+  /* 결과 카드 */
   .result-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-  .result-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .result-item { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
   .result-item.rank-1 { border-color: var(--gold); border-width: 1.5px; }
   .result-header { display: flex; align-items: center; gap: 14px; padding: 18px 20px; }
   .rank-badge { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
@@ -61,316 +62,355 @@
   .result-addr { font-size: 12px; color: var(--text-muted); }
   .result-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
   .transit-time { font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .transit-time.loading { font-size: 13px; color: var(--text-muted); font-weight: 400; animation: pulse 1.2s ease-in-out infinite; }
+  .transit-time.na { font-size: 13px; color: var(--text-muted); font-weight: 400; }
   .dist-label { font-size: 12px; color: var(--text-muted); }
-  .result-footer { background: var(--surface2); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 16px; flex-wrap: wrap; }
-  .footer-chip { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .result-footer { background: var(--surface); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .footer-chip { font-size: 12px; color: var(--text-muted); }
   .best-tag { background: var(--gold-light); border: 1px solid var(--gold); color: var(--gold); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
-  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
   .geocoded-addr { font-size: 12px; color: var(--accent-text); padding: 8px 12px; background: var(--accent-light); border-radius: 6px; margin-bottom: 12px; }
-  .map-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+  .map-link { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: 500; }
   .map-link:hover { text-decoration: underline; }
-  .sdk-status { font-size: 12px; color: var(--text-muted); text-align: center; padding: 8px; margin-top: 8px; }
-  .sdk-status.ready { color: var(--accent); }
+  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+
+  /* 지점 관리 탭 */
+  .mgmt-toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .mgmt-toolbar input { flex: 1; min-width: 160px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-family: inherit; font-size: 13px; outline: none; }
+  .mgmt-toolbar input:focus { border-color: var(--accent); }
+  .mgmt-toolbar input::placeholder { color: var(--text-muted); }
+  .mgmt-btn { padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .mgmt-btn:hover { background: var(--surface2); }
+  .mgmt-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .mgmt-btn.primary:hover { background: var(--accent-text); }
+  .mgmt-btn.danger { color: var(--danger); border-color: var(--danger); }
+  .mgmt-btn.danger:hover { background: var(--danger-light); }
+
+  .filter-chips { display: flex; gap: 6px; margin-bottom: 12px; }
+  .filter-chip { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; background: transparent; font-family: inherit; color: var(--text-muted); }
+  .filter-chip.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+
+  .branch-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .branch-table th { text-align: left; padding: 8px 10px; background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 500; color: var(--text-muted); font-size: 12px; position: sticky; top: 0; z-index: 1; }
+  .branch-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .branch-table tr:hover td { background: var(--surface2); }
+  .branch-table input { border: 1px solid transparent; background: transparent; font-family: inherit; font-size: 13px; padding: 4px 6px; border-radius: 5px; width: 100%; color: var(--text); outline: none; }
+  .branch-table input:focus { border-color: var(--accent); background: var(--surface); }
+  .branch-table input::placeholder { color: #C0BCB2; }
+  .tbl-toggle { padding: 3px 10px; border-radius: 14px; border: 1px solid; font-size: 11px; font-weight: 500; cursor: pointer; background: transparent; font-family: inherit; }
+  .tbl-toggle.on { border-color: var(--accent); color: var(--accent-text); background: var(--accent-light); }
+  .tbl-toggle.off { border-color: var(--border); color: var(--text-muted); }
+  .tbl-del { background: transparent; border: none; cursor: pointer; color: #C0BCB2; font-size: 15px; }
+  .tbl-del:hover { color: var(--danger); }
+  .table-wrap { max-height: 500px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  .branch-count { font-size: 12px; color: var(--text-muted); margin-top: 8px; text-align: right; }
+
   @media (max-width: 540px) {
-    .branch-row { grid-template-columns: 1fr 1fr; }
     .search-wrap { flex-direction: column; }
+    .tab-btn { padding: 8px 16px; font-size: 13px; }
+    .branch-table { font-size: 12px; }
   }
 </style>
 </head>
 <body>
-<header>
-  <h1>📍 가까운 지점 찾기</h1>
-  <p>지원자 주소를 입력하면 채용 진행 중인 지점의 거리 순위를 보여드려요.</p>
-</header>
-<div class="main">
-  <div class="card">
-    <p class="card-title">채용 진행 지점 관리</p>
-    <div class="branch-list" id="branch-list"></div>
-    <button class="add-btn" onclick="addBranch()">+ 지점 추가</button>
-    <p class="save-notice">* 지점 정보는 이 브라우저에 자동 저장돼요</p>
-  </div>
-  <div class="card">
-    <p class="card-title">지원자 주소 검색</p>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('search')">🔍 검색</button>
+  <button class="tab-btn" onclick="switchTab('manage')">📋 지점 관리</button>
+</div>
+
+<div class="tab-content">
+
+  <!-- 검색 탭 -->
+  <div class="tab-panel active" id="tab-search">
+    <header>
+      <h1>📍 가까운 지점 찾기</h1>
+      <p>지원자 주소를 입력하면 채용 진행 중인 지점의 대중교통 소요시간 순위를 보여드려요.</p>
+    </header>
+    <div id="stat-bar" class="stat-bar"></div>
     <div class="search-wrap">
-      <input type="text" id="applicant-input" placeholder="예: 경기 양주시 옥정동로9길 106" onkeydown="if(event.key==='Enter') findClosest()" />
+      <input type="text" id="applicant-input" placeholder="지원자 주소 입력 (예: 경기 양주시 옥정동로9길 106)" onkeydown="if(event.key==='Enter') findClosest()" />
       <button class="search-btn" id="search-btn" onclick="findClosest()" disabled>로딩 중...</button>
     </div>
     <div id="sdk-status" class="sdk-status">⏳ 카카오 지도 SDK 로딩 중...</div>
     <div id="result-area"></div>
   </div>
+
+  <!-- 지점 관리 탭 -->
+  <div class="tab-panel" id="tab-manage">
+    <header>
+      <h1>📋 지점 관리</h1>
+      <p>채용 진행 지점을 추가/수정/삭제할 수 있어요. 변경사항은 자동 저장됩니다.</p>
+    </header>
+
+    <div class="mgmt-toolbar">
+      <input type="text" id="mgmt-search" placeholder="지점명 또는 주소 검색..." oninput="renderTable()" />
+      <button class="mgmt-btn primary" onclick="addBranch()">+ 지점 추가</button>
+      <button class="mgmt-btn" onclick="toggleAllActive(true)">전체 채용중</button>
+      <button class="mgmt-btn" onclick="toggleAllActive(false)">전체 미진행</button>
+      <button class="mgmt-btn danger" onclick="deleteInactive()">미진행 일괄삭제</button>
+    </div>
+
+    <div class="filter-chips">
+      <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">전체</button>
+      <button class="filter-chip" data-filter="on" onclick="setFilter('on')">채용중</button>
+      <button class="filter-chip" data-filter="off" onclick="setFilter('off')">미진행</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="branch-table">
+        <thead>
+          <tr>
+            <th style="width:30px">#</th>
+            <th style="width:150px">지점명</th>
+            <th>주소</th>
+            <th style="width:70px">상태</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="branch-tbody"></tbody>
+      </table>
+    </div>
+    <div id="branch-count" class="branch-count"></div>
+  </div>
+
 </div>
 
 <script>
-// ===== 전역 변수 =====
-const STORAGE_KEY = 'branch_finder_v4';
+// ===== 설정 =====
+const KAKAO_JS_KEY = 'e8be738ed825694bd80ba84b27a9a977';
+const ODSAY_KEY = '6l4xht3IrJXBhl+AbaMSYA';
+const STORAGE_KEY = 'branch_finder_v6';
+
 let branches = [], nextId = 1;
-let geocoder = null;
-let places = null;
-let sdkReady = false;
+let geocoder = null, places = null, sdkReady = false;
+let currentFilter = 'all';
 
-// ===== 데이터 관리 =====
+// ===== 탭 전환 =====
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+  document.getElementById(`tab-${tab === 'search' ? 'search' : 'manage'}`).classList.add('active');
+  if (tab === 'manage') renderTable();
+  if (tab === 'search') updateStatBar();
+}
+
+// ===== 데이터 =====
 function loadBranches() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const data = JSON.parse(saved);
-      branches = data.branches || [];
-      nextId = data.nextId || (branches.length ? Math.max(...branches.map(b=>b.id))+1 : 1);
-      return;
-    }
-  } catch(e) {}
-  branches = [
-    { id:1, name:'서울 강남지점', address:'서울특별시 강남구 테헤란로 152', active:true },
-    { id:2, name:'서울 홍대지점', address:'서울특별시 마포구 양화로 160', active:true },
-    { id:3, name:'인천 부평지점', address:'인천광역시 부평구 부평대로 168', active:false },
-    { id:4, name:'수원 영통지점', address:'경기도 수원시 영통구 영통로 56', active:true },
-  ];
-  nextId = 5;
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) { const d = JSON.parse(s); branches = d.branches||[]; nextId = d.nextId||1; return; } } catch(e) {}
+  branches = []; nextId = 1;
+}
+function saveBranches() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ branches, nextId })); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateStatBar() {
+  const total = branches.length;
+  const active = branches.filter(b => b.active).length;
+  document.getElementById('stat-bar').innerHTML = `전체 <strong>${total}</strong>개 지점 중 채용 진행 <strong>${active}</strong>개`;
 }
 
-function saveBranches() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ branches, nextId }));
+// ===== 지점 관리 테이블 =====
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderTable();
 }
 
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function renderTable() {
+  const search = (document.getElementById('mgmt-search')?.value || '').toLowerCase();
+  let filtered = branches;
+  if (currentFilter === 'on') filtered = filtered.filter(b => b.active);
+  if (currentFilter === 'off') filtered = filtered.filter(b => !b.active);
+  if (search) filtered = filtered.filter(b => b.name.toLowerCase().includes(search) || b.address.toLowerCase().includes(search));
 
-function renderBranches() {
-  const list = document.getElementById('branch-list');
-  list.innerHTML = '';
-  branches.forEach(b => {
-    const row = document.createElement('div');
-    row.className = 'branch-row';
-    row.innerHTML = `
-      <input type="text" value="${escHtml(b.name)}" placeholder="지점명" onchange="updateBranch(${b.id},'name',this.value)" />
-      <input type="text" value="${escHtml(b.address)}" placeholder="지점 주소 (도로명 권장)" onchange="updateBranch(${b.id},'address',this.value)" />
-      <button class="toggle-btn ${b.active?'on':'off'}" onclick="toggleBranch(${b.id})">${b.active?'✔ 채용중':'✕ 미진행'}</button>
-      <button class="del-btn" onclick="deleteBranch(${b.id})" title="삭제">🗑</button>
+  const tbody = document.getElementById('branch-tbody');
+  tbody.innerHTML = '';
+  filtered.forEach((b, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:var(--text-muted);font-size:11px;">${i+1}</td>
+      <td><input value="${escHtml(b.name)}" placeholder="지점명" onchange="updateBranch(${b.id},'name',this.value)" /></td>
+      <td><input value="${escHtml(b.address)}" placeholder="주소 입력" onchange="updateBranch(${b.id},'address',this.value)" /></td>
+      <td><button class="tbl-toggle ${b.active?'on':'off'}" onclick="toggleBranch(${b.id})">${b.active?'채용중':'미진행'}</button></td>
+      <td><button class="tbl-del" onclick="deleteBranch(${b.id})">🗑</button></td>
     `;
-    list.appendChild(row);
+    tbody.appendChild(tr);
   });
+  document.getElementById('branch-count').textContent = `${filtered.length}개 표시 / 전체 ${branches.length}개`;
+  updateStatBar();
 }
 
-function addBranch() { branches.push({id:nextId++,name:'',address:'',active:true}); saveBranches(); renderBranches(); }
-function deleteBranch(id) { if(!confirm('이 지점을 삭제할까요?')) return; branches=branches.filter(b=>b.id!==id); saveBranches(); renderBranches(); }
-function updateBranch(id,field,val) { branches=branches.map(b=>b.id===id?{...b,[field]:val}:b); saveBranches(); }
-function toggleBranch(id) { branches=branches.map(b=>b.id===id?{...b,active:!b.active}:b); saveBranches(); renderBranches(); }
+function addBranch() { branches.unshift({id:nextId++,name:'',address:'',active:true}); saveBranches(); renderTable(); }
+function deleteBranch(id) { if(!confirm('삭제할까요?')) return; branches=branches.filter(b=>b.id!==id); saveBranches(); renderTable(); }
+function updateBranch(id,f,v) { branches=branches.map(b=>b.id===id?{...b,[f]:v}:b); saveBranches(); }
+function toggleBranch(id) { branches=branches.map(b=>b.id===id?{...b,active:!b.active}:b); saveBranches(); renderTable(); }
+function toggleAllActive(val) {
+  const label = val ? '전체 채용중' : '전체 미진행';
+  if(!confirm(`모든 지점을 "${label}"으로 변경할까요?`)) return;
+  branches = branches.map(b => ({...b, active: val}));
+  saveBranches(); renderTable();
+}
+function deleteInactive() {
+  const cnt = branches.filter(b=>!b.active).length;
+  if(!cnt) { alert('미진행 지점이 없어요.'); return; }
+  if(!confirm(`미진행 상태 ${cnt}개 지점을 삭제할까요?`)) return;
+  branches = branches.filter(b => b.active);
+  saveBranches(); renderTable();
+}
 
-// ===== 카카오 SDK 동적 로드 =====
+// ===== 카카오 SDK =====
 function loadKakaoSDK() {
   return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=e8be738ed825694bd80ba84b27a9a977&libraries=services&autoload=false';
-    script.onload = function() {
-      if (typeof kakao === 'undefined') {
-        reject(new Error('카카오 객체를 찾을 수 없습니다'));
-        return;
-      }
-      kakao.maps.load(function() {
+    const s = document.createElement('script');
+    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_JS_KEY}&libraries=services&autoload=false`;
+    s.onload = () => {
+      if (typeof kakao === 'undefined') { reject(new Error('kakao 없음')); return; }
+      kakao.maps.load(() => {
         geocoder = new kakao.maps.services.Geocoder();
         places = new kakao.maps.services.Places();
-        sdkReady = true;
-        resolve();
+        sdkReady = true; resolve();
       });
     };
-    script.onerror = function() {
-      reject(new Error('카카오 SDK 스크립트 로드 실패'));
-    };
-    document.head.appendChild(script);
+    s.onerror = () => reject(new Error('카카오 SDK 로드 실패'));
+    document.head.appendChild(s);
   });
 }
 
-// ===== 주소 검색 =====
-function searchAddress(query) {
-  return new Promise((resolve) => {
-    if (!geocoder) { resolve(null); return; }
-    geocoder.addressSearch(query, function(result, status) {
-      if (status === kakao.maps.services.Status.OK && result.length > 0) {
-        const r = result[0];
-        resolve({
-          lat: parseFloat(r.y),
-          lon: parseFloat(r.x),
-          label: r.address_name || (r.road_address && r.road_address.address_name)
-        });
-      } else {
-        resolve(null);
-      }
-    });
-  });
-}
-
-function searchKeyword(query) {
-  return new Promise((resolve) => {
-    if (!places) { resolve(null); return; }
-    places.keywordSearch(query, function(result, status) {
-      if (status === kakao.maps.services.Status.OK && result.length > 0) {
-        const r = result[0];
-        resolve({
-          lat: parseFloat(r.y),
-          lon: parseFloat(r.x),
-          label: r.address_name || r.place_name
-        });
-      } else {
-        resolve(null);
-      }
-    });
-  });
-}
-
-async function geocode(address) {
-  let r = await searchAddress(address);
-  if (r) return r;
-
-  r = await searchKeyword(address);
-  if (r) return r;
-
-  const withoutNum = address.replace(/\s+\d+(-\d+)?$/, '');
-  if (withoutNum !== address) {
-    r = await searchAddress(withoutNum);
-    if (r) return { ...r, approximate: true };
-  }
-
-  const areaMatch = address.match(/([가-힣]+[시군구])\s*([가-힣]+[동읍면리])/);
-  if (areaMatch) {
-    r = await searchKeyword(areaMatch[0]);
-    if (r) return { ...r, approximate: true };
-  }
-
+// ===== 주소→좌표 =====
+function searchAddr(q) { return new Promise(r => { if(!geocoder){r(null);return;} geocoder.addressSearch(q,(res,st)=>{ st===kakao.maps.services.Status.OK&&res.length ? r({lat:+res[0].y,lon:+res[0].x,label:res[0].address_name}) : r(null); }); }); }
+function searchKw(q) { return new Promise(r => { if(!places){r(null);return;} places.keywordSearch(q,(res,st)=>{ st===kakao.maps.services.Status.OK&&res.length ? r({lat:+res[0].y,lon:+res[0].x,label:res[0].address_name||res[0].place_name}) : r(null); }); }); }
+async function geocode(addr) {
+  let r = await searchAddr(addr); if(r) return r;
+  r = await searchKw(addr); if(r) return r;
+  const noNum = addr.replace(/\s+\d+(-\d+)?$/,'');
+  if(noNum!==addr){r=await searchAddr(noNum);if(r)return r;}
+  const m = addr.match(/([가-힣]+[시군구])\s*([가-힣]+[동읍면리])/);
+  if(m){r=await searchKw(m[0]);if(r)return r;}
   return null;
 }
 
-// ===== 거리/시간 계산 =====
+// ===== ODsay =====
+function odsayTransit(sLat,sLon,eLat,eLon) {
+  return new Promise(resolve => {
+    const url = `https://api.odsay.com/v1/api/searchPubTransPathT?SX=${sLon}&SY=${sLat}&EX=${eLon}&EY=${eLat}&apiKey=${encodeURIComponent(ODSAY_KEY)}`;
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET',url,true);
+    xhr.onreadystatechange = function() {
+      if(xhr.readyState===4){
+        try {
+          const d = JSON.parse(xhr.responseText);
+          if(d.result&&d.result.path&&d.result.path.length){
+            const info = d.result.path[0].info;
+            resolve({ totalTime:info.totalTime, transitCount:info.busTransitCount+info.subwayTransitCount, payment:info.payment, busTransit:info.busTransitCount, subwayTransit:info.subwayTransitCount });
+          } else resolve(null);
+        } catch(e){resolve(null);}
+      }
+    };
+    xhr.send();
+  });
+}
+
+// ===== 거리 =====
 function haversine(lat1,lon1,lat2,lon2) {
-  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-
-function estimateTransitMinutes(distKm) {
-  if (distKm < 2) return Math.round(distKm * 8 + 10);
-  if (distKm < 10) return Math.round(distKm * 5 + 15);
-  if (distKm < 30) return Math.round(distKm * 3.5 + 20);
-  return Math.round(distKm * 3 + 30);
-}
-
-function minStr(m) {
-  if (!m) return null;
-  if (m < 60) return `${m}분`;
-  const h=Math.floor(m/60), r=m%60;
-  return r>0 ? `${h}시간 ${r}분` : `${h}시간`;
-}
+function minStr(m){if(!m)return'-';if(m<60)return m+'분';const h=Math.floor(m/60),r=m%60;return r>0?h+'시간 '+r+'분':h+'시간';}
 
 // ===== 결과 렌더링 =====
-function renderResults(results, geocodedLabel, originAddr) {
+function renderResults(results,label,originAddr) {
   const area = document.getElementById('result-area');
   const top3 = results.slice(0,3);
-  const badges = ['r1','r2','r3'];
-  const labels = ['1위','2위','3위'];
-
+  const badges=['r1','r2','r3'], labels=['1위','2위','3위'];
   let html = '';
-  if (geocodedLabel) {
-    html += `<div class="geocoded-addr">📌 인식된 주소: ${escHtml(geocodedLabel)}</div>`;
-  }
+  if(label) html += `<div class="geocoded-addr">📌 인식된 주소: ${escHtml(label)}</div>`;
   html += '<div class="result-list">';
-
-  top3.forEach((r, i) => {
-    const mins = r.transitMin;
+  top3.forEach((r,i) => {
+    const hasT = r.transit&&r.transit.totalTime;
+    const loading = r.transitLoading;
     const mapUrl = `https://map.kakao.com/?sName=${encodeURIComponent(originAddr)}&eName=${encodeURIComponent(r.address)}`;
-
     html += `
       <div class="result-item ${i===0?'rank-1':''}">
         <div class="result-header">
           <div class="rank-badge ${badges[i]}">${labels[i]}</div>
           <div class="result-info">
-            <div class="result-name">
-              ${escHtml(r.name)}
-              ${i===0 ? '<span class="best-tag">추천</span>' : ''}
-            </div>
+            <div class="result-name">${escHtml(r.name)}${i===0?'<span class="best-tag">추천</span>':''}</div>
             <div class="result-addr">${escHtml(r.address)}</div>
           </div>
           <div class="result-meta">
-            <div class="transit-time">약 ${minStr(mins)}</div>
+            ${loading ? '<div class="transit-time loading">계산 중...</div>' : hasT ? `<div class="transit-time">${minStr(r.transit.totalTime)}</div>` : '<div class="transit-time na">경로 없음</div>'}
             <div class="dist-label">직선거리 ${r.dist.toFixed(1)}km</div>
           </div>
         </div>
+        ${!loading&&hasT?`
         <div class="result-footer">
-          <div class="footer-chip">🚌 예상 소요시간 (참고용)</div>
-          <a href="${mapUrl}" target="_blank" class="map-link">📍 카카오맵에서 실제 경로 보기 →</a>
-        </div>
-      </div>
-    `;
+          <span class="footer-chip">🚌 대중교통 ${minStr(r.transit.totalTime)}</span>
+          <span class="footer-chip">🔄 환승 ${r.transit.transitCount}회</span>
+          <span class="footer-chip">💰 ${r.transit.payment?r.transit.payment.toLocaleString()+'원':'-'}</span>
+          <a href="${mapUrl}" target="_blank" class="map-link">📍 카카오맵에서 보기 →</a>
+        </div>`:''}
+      </div>`;
   });
-
   html += '</div>';
-  if (results.length > 3) {
-    html += `<p class="note">채용중 지점 ${results.length}개 중 상위 3개 표시</p>`;
-  }
+  if(results.length>3) html += `<p class="note">채용중 ${results.length}개 지점 중 가까운 상위 3개 표시</p>`;
   area.innerHTML = html;
 }
 
-// ===== 메인 검색 함수 =====
+// ===== 메인 검색 =====
 async function findClosest() {
-  if (!sdkReady) {
-    alert('카카오 지도 SDK 로딩이 아직 완료되지 않았어요. 잠시 후 다시 시도해 주세요.');
-    return;
-  }
-
+  if(!sdkReady){alert('카카오 지도 로딩 중이에요.');return;}
   const area = document.getElementById('result-area');
   const addr = document.getElementById('applicant-input').value.trim();
-  if (!addr) { area.innerHTML = '<p class="status-msg err">지원자 주소를 입력해 주세요.</p>'; return; }
-  const active = branches.filter(b => b.active && b.address.trim());
-  if (!active.length) { area.innerHTML = '<p class="status-msg err">채용 진행 중인 지점이 없습니다.</p>'; return; }
+  if(!addr){area.innerHTML='<p class="status-msg err">지원자 주소를 입력해 주세요.</p>';return;}
+  const active = branches.filter(b=>b.active&&b.address.trim());
+  if(!active.length){area.innerHTML='<p class="status-msg err">채용 진행 중인 지점이 없습니다. 지점 관리 탭에서 지점을 추가해 주세요.</p>';return;}
 
   area.innerHTML = '<p class="status-msg">🔍 주소 검색 중...</p>';
-
   const appGeo = await geocode(addr);
-  if (!appGeo) {
-    area.innerHTML = `
-      <p class="status-msg err">주소를 찾을 수 없어요.</p>
-      <p class="status-msg" style="margin-top:6px">
-        💡 아래 형식으로 시도해 보세요:<br>
-        &nbsp;&nbsp;• 경기도 양주시 옥정동로9길 106<br>
-        &nbsp;&nbsp;• 양주시 옥정동<br>
-        &nbsp;&nbsp;• 가까운 건물명이나 아파트명으로 검색
-      </p>`;
-    return;
-  }
+  if(!appGeo){area.innerHTML='<p class="status-msg err">주소를 찾을 수 없어요. 도로명 주소나 건물명으로 다시 입력해 주세요.</p>';return;}
 
+  area.innerHTML = `<p class="status-msg">📍 ${active.length}개 지점 거리 계산 중...</p>`;
   const geoResults = [];
-  for (const b of active) {
+  for(const b of active){
     const geo = await geocode(b.address);
-    if (!geo) continue;
-    const dist = haversine(appGeo.lat, appGeo.lon, geo.lat, geo.lon);
-    geoResults.push({ ...b, dist, geo, transitMin: estimateTransitMinutes(dist) });
+    if(!geo) continue;
+    geoResults.push({...b, dist:haversine(appGeo.lat,appGeo.lon,geo.lat,geo.lon), geo, transit:null, transitLoading:true});
+  }
+  if(!geoResults.length){area.innerHTML='<p class="status-msg err">지점 주소를 처리하지 못했어요.</p>';return;}
+  geoResults.sort((a,b)=>a.dist-b.dist);
+
+  const top3 = geoResults.slice(0,3);
+  renderResults(top3,appGeo.label,addr);
+
+  for(let i=0;i<top3.length;i++){
+    const t = await odsayTransit(appGeo.lat,appGeo.lon,top3[i].geo.lat,top3[i].geo.lon);
+    top3[i].transit = t;
+    top3[i].transitLoading = false;
+    renderResults(top3,appGeo.label,addr);
   }
 
-  if (!geoResults.length) { area.innerHTML = '<p class="status-msg err">지점 주소를 처리하지 못했어요.</p>'; return; }
-
-  geoResults.sort((a,b) => a.dist - b.dist);
-  renderResults(geoResults.slice(0,3), appGeo.label, addr);
+  const withT = top3.filter(r=>r.transit&&r.transit.totalTime);
+  const noT = top3.filter(r=>!r.transit||!r.transit.totalTime);
+  withT.sort((a,b)=>a.transit.totalTime-b.transit.totalTime);
+  renderResults([...withT,...noT],appGeo.label,addr);
 }
 
 // ===== 초기화 =====
 loadBranches();
-renderBranches();
+updateStatBar();
 
-loadKakaoSDK()
-  .then(() => {
-    document.getElementById('sdk-status').textContent = '✅ 카카오 지도 준비 완료';
-    document.getElementById('sdk-status').classList.add('ready');
-    const btn = document.getElementById('search-btn');
-    btn.disabled = false;
-    btn.textContent = '검색';
-    setTimeout(() => {
-      document.getElementById('sdk-status').style.display = 'none';
-    }, 1500);
-  })
-  .catch((err) => {
-    console.error('SDK 로드 오류:', err);
-    document.getElementById('sdk-status').innerHTML = '❌ 카카오 지도 로드 실패: ' + err.message + '<br>현재 페이지 주소가 카카오에 등록되어 있는지 확인해 주세요.';
-    document.getElementById('sdk-status').style.color = 'var(--danger)';
-  });
+loadKakaoSDK().then(()=>{
+  document.getElementById('sdk-status').textContent='✅ 준비 완료';
+  document.getElementById('sdk-status').classList.add('ready');
+  document.getElementById('search-btn').disabled=false;
+  document.getElementById('search-btn').textContent='검색';
+  setTimeout(()=>{document.getElementById('sdk-status').style.display='none';},1500);
+}).catch(err=>{
+  document.getElementById('sdk-status').innerHTML='❌ 카카오 지도 로드 실패: '+err.message;
+  document.getElementById('sdk-status').style.color='var(--danger)';
+});
 </script>
 </body>
 </html>
