@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>가까운 지점 찾기</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=e8be738ed825694bd80ba84b27a9a977&libraries=services"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -44,6 +43,7 @@
   .search-wrap input::placeholder { color: var(--text-muted); }
   .search-btn { background: var(--accent); border: none; border-radius: var(--radius); padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
   .search-btn:hover { background: var(--accent-text); }
+  .search-btn:disabled { background: #999; cursor: wait; }
   .search-btn:active { transform: scale(0.98); }
   .status-msg { margin-top: 12px; font-size: 13px; color: var(--text-muted); }
   .status-msg.err { color: var(--danger); }
@@ -61,17 +61,16 @@
   .result-addr { font-size: 12px; color: var(--text-muted); }
   .result-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
   .transit-time { font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
-  .transit-time.loading { font-size: 13px; color: var(--text-muted); font-weight: 400; animation: pulse 1.2s ease-in-out infinite; }
-  .transit-time.na { font-size: 13px; color: var(--text-muted); font-weight: 400; }
   .dist-label { font-size: 12px; color: var(--text-muted); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .result-footer { background: var(--surface2); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 16px; flex-wrap: wrap; }
   .footer-chip { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
   .best-tag { background: var(--gold-light); border: 1px solid var(--gold); color: var(--gold); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
   .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
-  .geocoded-addr { font-size: 11px; color: var(--accent); margin-top: 4px; padding: 6px 10px; background: var(--accent-light); border-radius: 6px; display: inline-block; }
+  .geocoded-addr { font-size: 12px; color: var(--accent-text); padding: 8px 12px; background: var(--accent-light); border-radius: 6px; margin-bottom: 12px; }
   .map-link { color: var(--accent); text-decoration: none; font-size: 12px; }
   .map-link:hover { text-decoration: underline; }
+  .sdk-status { font-size: 12px; color: var(--text-muted); text-align: center; padding: 8px; margin-top: 8px; }
+  .sdk-status.ready { color: var(--accent); }
   @media (max-width: 540px) {
     .branch-row { grid-template-columns: 1fr 1fr; }
     .search-wrap { flex-direction: column; }
@@ -94,23 +93,22 @@
     <p class="card-title">지원자 주소 검색</p>
     <div class="search-wrap">
       <input type="text" id="applicant-input" placeholder="예: 경기 양주시 옥정동로9길 106" onkeydown="if(event.key==='Enter') findClosest()" />
-      <button class="search-btn" onclick="findClosest()">검색</button>
+      <button class="search-btn" id="search-btn" onclick="findClosest()" disabled>로딩 중...</button>
     </div>
+    <div id="sdk-status" class="sdk-status">⏳ 카카오 지도 SDK 로딩 중...</div>
     <div id="result-area"></div>
   </div>
 </div>
 
 <script>
+// ===== 전역 변수 =====
 const STORAGE_KEY = 'branch_finder_v4';
 let branches = [], nextId = 1;
 let geocoder = null;
 let places = null;
+let sdkReady = false;
 
-kakao.maps.load(function() {
-  geocoder = new kakao.maps.services.Geocoder();
-  places = new kakao.maps.services.Places();
-});
-
+// ===== 데이터 관리 =====
 function loadBranches() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -159,16 +157,41 @@ function deleteBranch(id) { if(!confirm('이 지점을 삭제할까요?')) retur
 function updateBranch(id,field,val) { branches=branches.map(b=>b.id===id?{...b,[field]:val}:b); saveBranches(); }
 function toggleBranch(id) { branches=branches.map(b=>b.id===id?{...b,active:!b.active}:b); saveBranches(); renderBranches(); }
 
-// 카카오맵 JS SDK 방식 주소 검색
+// ===== 카카오 SDK 동적 로드 =====
+function loadKakaoSDK() {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=e8be738ed825694bd80ba84b27a9a977&libraries=services&autoload=false';
+    script.onload = function() {
+      if (typeof kakao === 'undefined') {
+        reject(new Error('카카오 객체를 찾을 수 없습니다'));
+        return;
+      }
+      kakao.maps.load(function() {
+        geocoder = new kakao.maps.services.Geocoder();
+        places = new kakao.maps.services.Places();
+        sdkReady = true;
+        resolve();
+      });
+    };
+    script.onerror = function() {
+      reject(new Error('카카오 SDK 스크립트 로드 실패'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+// ===== 주소 검색 =====
 function searchAddress(query) {
   return new Promise((resolve) => {
     if (!geocoder) { resolve(null); return; }
     geocoder.addressSearch(query, function(result, status) {
       if (status === kakao.maps.services.Status.OK && result.length > 0) {
+        const r = result[0];
         resolve({
-          lat: parseFloat(result[0].y),
-          lon: parseFloat(result[0].x),
-          label: result[0].address_name || result[0].road_address?.address_name
+          lat: parseFloat(r.y),
+          lon: parseFloat(r.x),
+          label: r.address_name || (r.road_address && r.road_address.address_name)
         });
       } else {
         resolve(null);
@@ -182,10 +205,11 @@ function searchKeyword(query) {
     if (!places) { resolve(null); return; }
     places.keywordSearch(query, function(result, status) {
       if (status === kakao.maps.services.Status.OK && result.length > 0) {
+        const r = result[0];
         resolve({
-          lat: parseFloat(result[0].y),
-          lon: parseFloat(result[0].x),
-          label: result[0].address_name || result[0].place_name
+          lat: parseFloat(r.y),
+          lon: parseFloat(r.x),
+          label: r.address_name || r.place_name
         });
       } else {
         resolve(null);
@@ -195,22 +219,18 @@ function searchKeyword(query) {
 }
 
 async function geocode(address) {
-  // 1단계: 주소 검색
   let r = await searchAddress(address);
   if (r) return r;
 
-  // 2단계: 키워드 검색
   r = await searchKeyword(address);
   if (r) return r;
 
-  // 3단계: 번지 떼고 도로명만
   const withoutNum = address.replace(/\s+\d+(-\d+)?$/, '');
   if (withoutNum !== address) {
     r = await searchAddress(withoutNum);
     if (r) return { ...r, approximate: true };
   }
 
-  // 4단계: 시/구/동 까지만
   const areaMatch = address.match(/([가-힣]+[시군구])\s*([가-힣]+[동읍면리])/);
   if (areaMatch) {
     r = await searchKeyword(areaMatch[0]);
@@ -220,6 +240,7 @@ async function geocode(address) {
   return null;
 }
 
+// ===== 거리/시간 계산 =====
 function haversine(lat1,lon1,lat2,lon2) {
   const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
@@ -227,8 +248,6 @@ function haversine(lat1,lon1,lat2,lon2) {
 }
 
 function estimateTransitMinutes(distKm) {
-  // 직선거리 기반 대중교통 시간 추정 (한국 도시지역 평균)
-  // 평균 속도 약 18-22km/h + 환승/대기 시간 고려
   if (distKm < 2) return Math.round(distKm * 8 + 10);
   if (distKm < 10) return Math.round(distKm * 5 + 15);
   if (distKm < 30) return Math.round(distKm * 3.5 + 20);
@@ -242,7 +261,8 @@ function minStr(m) {
   return r>0 ? `${h}시간 ${r}분` : `${h}시간`;
 }
 
-function renderResults(results, geocodedLabel, appCoord) {
+// ===== 결과 렌더링 =====
+function renderResults(results, geocodedLabel, originAddr) {
   const area = document.getElementById('result-area');
   const top3 = results.slice(0,3);
   const badges = ['r1','r2','r3'];
@@ -256,7 +276,7 @@ function renderResults(results, geocodedLabel, appCoord) {
 
   top3.forEach((r, i) => {
     const mins = r.transitMin;
-    const mapUrl = appCoord ? `https://map.kakao.com/?sName=${encodeURIComponent(geocodedLabel || '출발지')}&eName=${encodeURIComponent(r.address)}` : null;
+    const mapUrl = `https://map.kakao.com/?sName=${encodeURIComponent(originAddr)}&eName=${encodeURIComponent(r.address)}`;
 
     html += `
       <div class="result-item ${i===0?'rank-1':''}">
@@ -276,7 +296,7 @@ function renderResults(results, geocodedLabel, appCoord) {
         </div>
         <div class="result-footer">
           <div class="footer-chip">🚌 예상 소요시간 (참고용)</div>
-          ${mapUrl ? `<a href="${mapUrl}" target="_blank" class="map-link">📍 카카오맵에서 실제 경로 보기 →</a>` : ''}
+          <a href="${mapUrl}" target="_blank" class="map-link">📍 카카오맵에서 실제 경로 보기 →</a>
         </div>
       </div>
     `;
@@ -289,18 +309,18 @@ function renderResults(results, geocodedLabel, appCoord) {
   area.innerHTML = html;
 }
 
+// ===== 메인 검색 함수 =====
 async function findClosest() {
+  if (!sdkReady) {
+    alert('카카오 지도 SDK 로딩이 아직 완료되지 않았어요. 잠시 후 다시 시도해 주세요.');
+    return;
+  }
+
   const area = document.getElementById('result-area');
   const addr = document.getElementById('applicant-input').value.trim();
   if (!addr) { area.innerHTML = '<p class="status-msg err">지원자 주소를 입력해 주세요.</p>'; return; }
   const active = branches.filter(b => b.active && b.address.trim());
   if (!active.length) { area.innerHTML = '<p class="status-msg err">채용 진행 중인 지점이 없습니다.</p>'; return; }
-
-  if (!geocoder || !places) {
-    area.innerHTML = '<p class="status-msg">⏳ 지도 서비스 로딩 중... 잠시 후 다시 시도해 주세요.</p>';
-    setTimeout(findClosest, 500);
-    return;
-  }
 
   area.innerHTML = '<p class="status-msg">🔍 주소 검색 중...</p>';
 
@@ -328,11 +348,29 @@ async function findClosest() {
   if (!geoResults.length) { area.innerHTML = '<p class="status-msg err">지점 주소를 처리하지 못했어요.</p>'; return; }
 
   geoResults.sort((a,b) => a.dist - b.dist);
-  renderResults(geoResults.slice(0,3), appGeo.label, appGeo);
+  renderResults(geoResults.slice(0,3), appGeo.label, addr);
 }
 
+// ===== 초기화 =====
 loadBranches();
 renderBranches();
+
+loadKakaoSDK()
+  .then(() => {
+    document.getElementById('sdk-status').textContent = '✅ 카카오 지도 준비 완료';
+    document.getElementById('sdk-status').classList.add('ready');
+    const btn = document.getElementById('search-btn');
+    btn.disabled = false;
+    btn.textContent = '검색';
+    setTimeout(() => {
+      document.getElementById('sdk-status').style.display = 'none';
+    }, 1500);
+  })
+  .catch((err) => {
+    console.error('SDK 로드 오류:', err);
+    document.getElementById('sdk-status').innerHTML = '❌ 카카오 지도 로드 실패: ' + err.message + '<br>현재 페이지 주소가 카카오에 등록되어 있는지 확인해 주세요.';
+    document.getElementById('sdk-status').style.color = 'var(--danger)';
+  });
 </script>
 </body>
 </html>
