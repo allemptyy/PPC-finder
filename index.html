@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>가까운 지점 찾기</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F5F4F0; --surface: #FFFFFF; --surface2: #F0EEE9; --border: #E0DDD6;
+    --text: #1A1916; --text-muted: #7A7870;
+    --accent: #2D6A4F; --accent-light: #D8EDDF; --accent-text: #1B4332;
+    --danger: #C0392B; --danger-light: #FDECEA;
+    --gold: #B7860B; --gold-light: #FDF3D0;
+    --silver: #6B7280; --silver-light: #F3F4F6;
+    --bronze: #92400E; --bronze-light: #FEF3C7;
+    --radius: 10px; --radius-lg: 16px;
+  }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 16px 80px; }
+  header { max-width: 720px; margin: 0 auto 32px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  header p { font-size: 14px; color: var(--text-muted); }
+  .main { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
+  .card-title { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+  .branch-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .branch-row { display: grid; grid-template-columns: 1fr 2fr auto auto; gap: 8px; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; transition: border-color 0.15s; }
+  .branch-row:hover { border-color: #C0BCB2; }
+  .branch-row input { background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px; font-family: inherit; font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; width: 100%; }
+  .branch-row input:focus { border-color: var(--accent); }
+  .branch-row input::placeholder { color: var(--text-muted); }
+  .toggle-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px solid; font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .toggle-btn.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+  .toggle-btn.off { background: var(--surface2); border-color: var(--border); color: var(--text-muted); }
+  .del-btn { background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: 17px; line-height: 1; padding: 2px 4px; border-radius: 6px; transition: all 0.15s; }
+  .del-btn:hover { background: var(--danger-light); color: var(--danger); }
+  .add-btn { width: 100%; background: transparent; border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 10px; font-family: inherit; font-size: 13px; color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .search-wrap { display: flex; gap: 10px; align-items: stretch; }
+  .search-wrap input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; font-family: inherit; font-size: 15px; color: var(--text); outline: none; transition: border-color 0.15s; }
+  .search-wrap input:focus { border-color: var(--accent); background: var(--surface); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+  .search-btn { background: var(--accent); border: none; border-radius: var(--radius); padding: 12px 22px; font-family: inherit; font-size: 14px; font-weight: 700; color: #fff; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .search-btn:hover { background: var(--accent-text); }
+  .search-btn:active { transform: scale(0.98); }
+  .status-msg { margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+  .status-msg.err { color: var(--danger); }
+  .save-notice { font-size: 12px; color: var(--text-muted); margin-top: 8px; text-align: center; }
+  .result-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .result-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .result-item.rank-1 { border-color: var(--gold); border-width: 1.5px; }
+  .result-header { display: flex; align-items: center; gap: 14px; padding: 18px 20px; }
+  .rank-badge { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .rank-badge.r1 { background: var(--gold-light); color: var(--gold); border: 1.5px solid var(--gold); }
+  .rank-badge.r2 { background: var(--silver-light); color: var(--silver); border: 1.5px solid #D1D5DB; }
+  .rank-badge.r3 { background: var(--bronze-light); color: var(--bronze); border: 1.5px solid #D97706; }
+  .result-info { flex: 1; min-width: 0; }
+  .result-name { font-size: 16px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .result-addr { font-size: 12px; color: var(--text-muted); }
+  .result-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .transit-time { font-size: 22px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .transit-time.loading { font-size: 13px; color: var(--text-muted); font-weight: 400; animation: pulse 1.2s ease-in-out infinite; }
+  .transit-time.na { font-size: 13px; color: var(--text-muted); font-weight: 400; }
+  .dist-label { font-size: 12px; color: var(--text-muted); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .result-footer { background: var(--surface2); border-top: 1px solid var(--border); padding: 10px 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .footer-chip { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+  .best-tag { background: var(--gold-light); border: 1px solid var(--gold); color: var(--gold); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+  .note { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+  .geocoded-addr { font-size: 11px; color: var(--accent); margin-top: 4px; }
+  @media (max-width: 540px) {
+    .branch-row { grid-template-columns: 1fr 1fr; }
+    .search-wrap { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📍 가까운 지점 찾기</h1>
+  <p>지원자 주소를 입력하면 채용 진행 중인 지점의 대중교통 소요시간 순위를 보여드려요.</p>
+</header>
+<div class="main">
+  <div class="card">
+    <p class="card-title">채용 진행 지점 관리</p>
+    <div class="branch-list" id="branch-list"></div>
+    <button class="add-btn" onclick="addBranch()">+ 지점 추가</button>
+    <p class="save-notice">* 지점 정보는 이 브라우저에 자동 저장돼요</p>
+  </div>
+  <div class="card">
+    <p class="card-title">지원자 주소 검색</p>
+    <div class="search-wrap">
+      <input type="text" id="applicant-input" placeholder="예: 경기 양주시 옥정동로9길 106" onkeydown="if(event.key==='Enter') findClosest()" />
+      <button class="search-btn" onclick="findClosest()">검색</button>
+    </div>
+    <div id="result-area"></div>
+  </div>
+</div>
+
+<script>
+const KAKAO_KEY = 'db8237b2399839ec604a063fbf8ee734';
+const STORAGE_KEY = 'branch_finder_v3';
+let branches = [], nextId = 1;
+
+function loadBranches() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const data = JSON.parse(saved);
+      branches = data.branches || [];
+      nextId = data.nextId || (branches.length ? Math.max(...branches.map(b=>b.id))+1 : 1);
+      return;
+    }
+  } catch(e) {}
+  branches = [
+    { id:1, name:'서울 강남지점', address:'서울특별시 강남구 테헤란로 152', active:true },
+    { id:2, name:'서울 홍대지점', address:'서울특별시 마포구 양화로 160', active:true },
+    { id:3, name:'인천 부평지점', address:'인천광역시 부평구 부평대로 168', active:false },
+    { id:4, name:'수원 영통지점', address:'경기도 수원시 영통구 영통로 56', active:true },
+  ];
+  nextId = 5;
+}
+
+function saveBranches() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ branches, nextId }));
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderBranches() {
+  const list = document.getElementById('branch-list');
+  list.innerHTML = '';
+  branches.forEach(b => {
+    const row = document.createElement('div');
+    row.className = 'branch-row';
+    row.innerHTML = `
+      <input type="text" value="${escHtml(b.name)}" placeholder="지점명" onchange="updateBranch(${b.id},'name',this.value)" />
+      <input type="text" value="${escHtml(b.address)}" placeholder="지점 주소 (도로명 권장)" onchange="updateBranch(${b.id},'address',this.value)" />
+      <button class="toggle-btn ${b.active?'on':'off'}" onclick="toggleBranch(${b.id})">${b.active?'✔ 채용중':'✕ 미진행'}</button>
+      <button class="del-btn" onclick="deleteBranch(${b.id})" title="삭제">🗑</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function addBranch() { branches.push({id:nextId++,name:'',address:'',active:true}); saveBranches(); renderBranches(); }
+function deleteBranch(id) { if(!confirm('이 지점을 삭제할까요?')) return; branches=branches.filter(b=>b.id!==id); saveBranches(); renderBranches(); }
+function updateBranch(id,field,val) { branches=branches.map(b=>b.id===id?{...b,[field]:val}:b); saveBranches(); }
+function toggleBranch(id) { branches=branches.map(b=>b.id===id?{...b,active:!b.active}:b); saveBranches(); renderBranches(); }
+
+// 주소 → 좌표 변환: 4단계 시도
+async function kakaoGeocode(address) {
+  const h = { Authorization: `KakaoAK ${KAKAO_KEY}` };
+
+  // 1단계: 주소 검색 API
+  try {
+    const r = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}&analyze_type=similar`, {headers:h});
+    const d = await r.json();
+    if (d.documents && d.documents.length > 0) {
+      const doc = d.documents[0];
+      const coord = doc.road_address || doc.address;
+      if (coord) return { lat: parseFloat(coord.y || doc.y), lon: parseFloat(coord.x || doc.x), label: doc.address_name };
+      return { lat: parseFloat(doc.y), lon: parseFloat(doc.x), label: doc.address_name };
+    }
+  } catch(e) {}
+
+  // 2단계: 키워드 검색 API
+  try {
+    const r = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(address)}`, {headers:h});
+    const d = await r.json();
+    if (d.documents && d.documents.length > 0) {
+      return { lat: parseFloat(d.documents[0].y), lon: parseFloat(d.documents[0].x), label: d.documents[0].address_name };
+    }
+  } catch(e) {}
+
+  // 3단계: 번지 제거 후 도로명만으로 재시도
+  const withoutNum = address.replace(/\s+\d+(-\d+)?$/, '');
+  if (withoutNum !== address) {
+    try {
+      const r = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(withoutNum)}&analyze_type=similar`, {headers:h});
+      const d = await r.json();
+      if (d.documents && d.documents.length > 0) {
+        return { lat: parseFloat(d.documents[0].y), lon: parseFloat(d.documents[0].x), label: d.documents[0].address_name, approximate: true };
+      }
+    } catch(e) {}
+  }
+
+  // 4단계: 시/군/구 + 동/읍/면 키워드로 축약 재시도
+  const areaMatch = address.match(/([가-힣]+[시군구])\s*([가-힣]+[동읍면리])/);
+  if (areaMatch) {
+    const areaQuery = areaMatch[0];
+    try {
+      const r = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(areaQuery)}`, {headers:h});
+      const d = await r.json();
+      if (d.documents && d.documents.length > 0) {
+        return { lat: parseFloat(d.documents[0].y), lon: parseFloat(d.documents[0].x), label: d.documents[0].address_name, approximate: true };
+      }
+    } catch(e) {}
+  }
+
+  return null;
+}
+
+async function getTransitTime(oLat, oLon, dLat, dLon) {
+  try {
+    const url = `https://apis-navi.kakaomobility.com/v1/directions/transit?origin=${oLon},${oLat}&destination=${dLon},${dLat}&priority=RECOMMEND`;
+    const res = await fetch(url, { headers: { Authorization: `KakaoAK ${KAKAO_KEY}` } });
+    const data = await res.json();
+    if (data.routes && data.routes.length > 0 && data.routes[0].summary && data.routes[0].summary.duration) {
+      return { minutes: Math.round(data.routes[0].summary.duration / 60), type: 'transit' };
+    }
+  } catch(e) {}
+  try {
+    const url2 = `https://apis-navi.kakaomobility.com/v1/directions?origin=${oLon},${oLat}&destination=${dLon},${dLat}&priority=RECOMMEND`;
+    const res2 = await fetch(url2, { headers: { Authorization: `KakaoAK ${KAKAO_KEY}` } });
+    const data2 = await res2.json();
+    if (data2.routes && data2.routes.length > 0 && data2.routes[0].summary && data2.routes[0].summary.duration) {
+      return { minutes: Math.round(data2.routes[0].summary.duration / 60), type: 'car' };
+    }
+  } catch(e) {}
+  return null;
+}
+
+function haversine(lat1,lon1,lat2,lon2) {
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function minStr(m) {
+  if (!m) return null;
+  if (m < 60) return `${m}분`;
+  const h=Math.floor(m/60), r=m%60;
+  return r>0 ? `${h}시간 ${r}분` : `${h}시간`;
+}
+
+function renderResults(results, geocodedLabel) {
+  const area = document.getElementById('result-area');
+  const top3 = results.slice(0,3);
+  const badges = ['r1','r2','r3'];
+  const labels = ['1위','2위','3위'];
+
+  let html = '';
+  if (geocodedLabel) {
+    html += `<p class="geocoded-addr">📌 인식된 주소: ${escHtml(geocodedLabel)}</p>`;
+  }
+  html += '<div class="result-list">';
+
+  top3.forEach((r, i) => {
+    const timeLoading = r.transitMin === undefined;
+    const timeNull = r.transitMin === null;
+    const mins = r.transitMin ? r.transitMin.minutes : null;
+    const isCar = r.transitMin && r.transitMin.type === 'car';
+
+    html += `
+      <div class="result-item ${i===0?'rank-1':''}">
+        <div class="result-header">
+          <div class="rank-badge ${badges[i]}">${labels[i]}</div>
+          <div class="result-info">
+            <div class="result-name">
+              ${escHtml(r.name)}
+              ${i===0 ? '<span class="best-tag">추천</span>' : ''}
+            </div>
+            <div class="result-addr">${escHtml(r.address)}</div>
+          </div>
+          <div class="result-meta">
+            ${timeLoading
+              ? '<div class="transit-time loading">계산 중...</div>'
+              : timeNull || !mins
+                ? '<div class="transit-time na">정보 없음</div>'
+                : `<div class="transit-time">${minStr(mins)}</div>`
+            }
+            <div class="dist-label">직선거리 ${r.dist.toFixed(1)}km</div>
+          </div>
+        </div>
+        ${!timeLoading && mins ? `
+        <div class="result-footer">
+          <div class="footer-chip">${isCar ? '🚗 자동차 기준 (대중교통 정보 없음)' : '🚌 대중교통 소요시간'}</div>
+          <div class="footer-chip">📍 직선거리 ${r.dist.toFixed(1)}km</div>
+        </div>` : ''}
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  if (results.length > 3) {
+    html += `<p class="note">채용중 지점 ${results.length}개 중 상위 3개 표시</p>`;
+  }
+  area.innerHTML = html;
+}
+
+async function findClosest() {
+  const area = document.getElementById('result-area');
+  const addr = document.getElementById('applicant-input').value.trim();
+  if (!addr) { area.innerHTML = '<p class="status-msg err">지원자 주소를 입력해 주세요.</p>'; return; }
+  const active = branches.filter(b => b.active && b.address.trim());
+  if (!active.length) { area.innerHTML = '<p class="status-msg err">채용 진행 중인 지점이 없습니다.</p>'; return; }
+
+  area.innerHTML = '<p class="status-msg">🔍 주소 검색 중...</p>';
+
+  const appGeo = await kakaoGeocode(addr);
+  if (!appGeo) {
+    area.innerHTML = `
+      <p class="status-msg err">주소를 찾을 수 없어요.</p>
+      <p class="status-msg" style="margin-top:6px">
+        💡 아래 형식으로 시도해 보세요:<br>
+        &nbsp;&nbsp;• 경기도 양주시 옥정동로9길 106<br>
+        &nbsp;&nbsp;• 양주시 옥정동<br>
+        &nbsp;&nbsp;• 가까운 건물명이나 아파트명으로 검색
+      </p>`;
+    return;
+  }
+
+  const geoResults = [];
+  for (const b of active) {
+    const geo = await kakaoGeocode(b.address);
+    if (!geo) continue;
+    geoResults.push({ ...b, dist: haversine(appGeo.lat, appGeo.lon, geo.lat, geo.lon), geo });
+  }
+
+  if (!geoResults.length) { area.innerHTML = '<p class="status-msg err">지점 주소를 처리하지 못했어요.</p>'; return; }
+
+  geoResults.sort((a,b) => a.dist - b.dist);
+  const top3 = geoResults.slice(0,3).map(r => ({...r, transitMin: undefined}));
+
+  renderResults(top3, appGeo.label);
+
+  for (let i = 0; i < top3.length; i++) {
+    const t = await getTransitTime(appGeo.lat, appGeo.lon, top3[i].geo.lat, top3[i].geo.lon);
+    top3[i].transitMin = t || null;
+    renderResults(top3, appGeo.label);
+  }
+
+  // 대중교통 시간 기준 재정렬
+  const withTime = top3.filter(r => r.transitMin && r.transitMin.minutes);
+  const noTime = top3.filter(r => !r.transitMin || !r.transitMin.minutes);
+  withTime.sort((a,b) => a.transitMin.minutes - b.transitMin.minutes);
+  renderResults([...withTime, ...noTime], appGeo.label);
+}
+
+loadBranches();
+renderBranches();
+</script>
+</body>
+</html>
